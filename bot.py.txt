@@ -1,0 +1,71 @@
+import logging
+from aiogram import Bot, Dispatcher, F, types
+from aiogram.filters import Command
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
+# Configurazione token e prezzi
+TELEGRAM_BOT_TOKEN = "8886071836:AAEaF6UX8MhYIaoVzBYnu-ununozQBNE-0E"
+CRYPTO_PAY_TOKEN = "632313:AAEKqdS9oAxDjFLiglSxMRrcYUiagu9rj2P"
+PRICE_USDT_TON = 0.5  # Prezzo impostato a 0.5
+
+logging.basicConfig(level=logging.INFO)
+bot = Bot(token=TELEGRAM_BOT_TOKEN)
+dp = Dispatcher(storage=MemoryStorage())
+
+INSULTI = [
+    "Hai la stessa utilità di un posacenere su una moto da cross.",
+    "Se la mediocrità avesse una capitale, tu saresti il sindaco onorario.",
+    "Il tuo cervello viaggia così in ritardo che quando arrivano le idee sono già scadute.",
+    "Sei la prova vivente che l'evoluzione a volte si prende una pausa sabbatica.",
+    "Hai il QI di un ferro da stiro, ma con molta meno personalità."
+]
+
+@dp.message(Command("start"))
+async def cmd_start(message: types.Message):
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💀 Compera un Insulto (0.5 USDT/TON)", callback_data="buy_insult")]
+    ])
+    await message.answer(
+        "Benvenuto su **DisprezzoPuroBot**.\n\n"
+        "Sei pronto a sprecare denaro per ricevere offese personalizzate di altissimo livello cinico? Clicca sotto.",
+        reply_markup=kb,
+        parse_mode="Markdown"
+    )
+
+@dp.callback_query(F.data == "buy_insult")
+async def process_buy(callback: types.CallbackQuery):
+    import aiohttp
+    
+    url = "https://pay.crypt.bot/api/createInvoice"
+    headers = {"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN}
+    payload = {
+        "asset": "USDT",
+        "amount": "0.5",
+        "description": "Acquisto insulto cinico personalizzato da DisprezzoPuroBot",
+        "payload": f"user_{callback.from_user.id}"
+    }
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload, headers=headers) as resp:
+            data = await resp.json()
+            if data.get("ok"):
+                invoice = data["result"]
+                pay_url = invoice["bot_invoice_url"]
+                
+                kb = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="💳 Paga 0.5 USDT/TON", url=pay_url)],
+                    [InlineKeyboardButton(text="🔄 Ho pagato, dammi l'insulto", callback_data="check_payment")]
+                ])
+                await callback.message.answer(
+                    "Fattura generata con successo! Clicca sul pulsante per pagare 0.5 USDT/TON tramite Crypto Pay:",
+                    reply_markup=kb
+                )
+            else:
+                await callback.message.answer("Errore nella generazione del pagamento. Riprova più tardi.")
+    
+    await callback.answer()
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(dp.start_polling(bot))

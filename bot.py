@@ -8,22 +8,17 @@ from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-import google.generativeai as genai
+from google import genai
 
 TELEGRAM_BOT_TOKEN = "8886071836:AAEaF6UX8MhYIaoVzBYnu-ununozQBNE-0E"
 CRYPTO_PAY_TOKEN = "632313:AAEKqdS9oAxDjFLiglSxMRrcYUiagu9rj2P"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# Configurazione di Google GenAI
+# Inizializzazione del client ufficiale Google GenAI
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    # Usiamo il modello flash standard
-    generation_model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        system_instruction="Sei un bot cinico, spietato, sarcastico e disprezzativo. L'utente ti scriverà qualcosa. Tu devi rispondere rigorosamente in massimo due frasi secche e taglienti, prendendo in giro quello che ha detto senza ripeterlo paro paro, demolendo le sue convinzioni."
-    )
+    ai_client = genai.Client(api_key=GEMINI_API_KEY)
 else:
-    generation_model = None
+    ai_client = None
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -93,15 +88,19 @@ async def process_check_payment(callback: types.CallbackQuery):
                         break
                 
                 if paid:
-                    # Se ha pagato, usiamo direttamente l'IA anche qui per un insulto epico personalizzato
-                    if generation_model:
+                    ai_reply = "Hai pagato, ma la tua utilità resta comunque prossima allo zero."
+                    if ai_client:
                         try:
-                            response = generation_model.generate_content("L'utente ha pagato regolarmente, dagli un insulto d'élite per celebrarlo.")
-                            ai_reply = response.text.strip()
-                        except Exception:
-                            ai_reply = "Hai pagato, ma il tuo valore resta comunque prossimo allo zero."
-                    else:
-                        ai_reply = "Pagamento verificato, ma il cervello elettronico è disattivato."
+                            prompt_pagamento = "L'utente ha pagato regolarmente l'insulto. Dagli un insulto d'élite e spietato per celebrarlo in massimo due frasi."
+                            response = await asyncio.to_thread(
+                                ai_client.models.generate_content,
+                                model="gemini-1.5-flash",
+                                contents=prompt_pagamento
+                            )
+                            if response and response.text:
+                                ai_reply = response.text.strip()
+                        except Exception as e:
+                            logging.error(f"Errore IA pagamento: {e}")
                     
                     await callback.message.answer(f"Pagamento verificato! Ecco il tuo insulto:\n\n_{ai_reply}_", parse_mode="Markdown")
                 else:
@@ -111,24 +110,35 @@ async def process_check_payment(callback: types.CallbackQuery):
                 
     await callback.answer()
 
-# Gestione tramite SDK ufficiale Google Gemini
+# Gestione dinamica dei messaggi di testo tramite Google GenAI
 @dp.message(F.text & ~F.text.startswith("/"))
 async def handle_any_text(message: types.Message):
     user_text = message.text.strip()
     
-    if not generation_model:
+    if not ai_client:
         await message.answer("Errore: Chiave API di Gemini non configurata nelle variabili d'ambiente.")
         return
 
+    prompt_completo = (
+        f"Sei un bot cinico, spietato, sarcastico e disprezzativo. "
+        f"L'utente ha scritto: '{user_text}'. "
+        f"Rispondi rigorosamente in massimo due frasi secche e taglienti, prendendo in giro "
+        f"il concetto espresso senza ripetere la sua frase paro paro."
+    )
+
     try:
-        # Eseguiamo la generazione in modo asincrono per non bloccare il bot Telegram
-        response = await asyncio.to_thread(generation_model.generate_content, user_text)
+        response = await asyncio.to_thread(
+            ai_client.models.generate_content,
+            model="gemini-1.5-flash",
+            contents=prompt_completo
+        )
+        
         if response and response.text:
             await message.answer(response.text.strip())
         else:
-            await message.answer("Il mio cervello cinico ha avuto un sussulto vuoto. Riprova tra poco.")
+            await message.answer("Il mio cervello cinico ha avuto un vuoto cosmico. Riprova tra poco.")
     except Exception as e:
-        logging.error(f"Eccezione chiamata IA ufficiale: {e}")
+        logging.error(f"Eccezione chiamata Google GenAI: {e}")
         await message.answer("Anche l'insulto intelligente oggi è in sciopero. Riprova più tardi.")
 
 class SimpleHandler(BaseHTTPRequestHandler):

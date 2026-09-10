@@ -66,7 +66,38 @@ async def process_buy(callback: types.CallbackQuery):
     
     await callback.answer()
 
-# --- BLOCCO PER RENDER (Evita il Time Out senza installare nulla) ---
+@dp.callback_query(F.data == "check_payment")
+async def process_check_payment(callback: types.CallbackQuery):
+    import aiohttp
+    import random
+    
+    url = "https://pay.crypt.bot/api/getInvoices"
+    headers = {"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN}
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as resp:
+            data = await resp.json()
+            if data.get("ok"):
+                invoices = data["result"]["items"]
+                user_payload = f"user_{callback.from_user.id}"
+                
+                paid = False
+                for inv in invoices:
+                    if inv.get("payload") == user_payload and inv.get("status") == "paid":
+                        paid = True
+                        break
+                
+                if paid:
+                    insulto_scelto = random.choice(INSULTI)
+                    await callback.message.answer(f"Pagamento verificato! Ecco il tuo insulto:\n\n_{insulto_scelto}_", parse_mode="Markdown")
+                else:
+                    await callback.message.answer("Risultato: pagamento non ancora completato o non trovato. Completa il pagamento tramite il link sopra e riprova.")
+            else:
+                await callback.message.answer("Errore nella verifica del pagamento. Riprova più tardi.")
+                
+    await callback.answer()
+
+# --- BLOCCO PER RENDER (Tiene aperta la porta HTTP) ---
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import os

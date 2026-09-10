@@ -102,7 +102,7 @@ async def process_check_payment(callback: types.CallbackQuery):
                             rnd_pay = f" [ID:{random.randint(100000, 999999)}]"
                             prompt_pagamento = f"L'utente ha pagato l'insulto.{rnd_pay} Scrivi un tributo di disprezzo completamente nuovo e creativo per celebrarlo."
                             response = ai_client.models.generate_content(
-                                model="gemini-2.5-flash",
+                                model="gemini-3.6-flash",
                                 contents=prompt_pagamento,
                                 config=config_pagamento
                             )
@@ -148,7 +148,7 @@ async def handle_any_text(message: types.Message):
 
     try:
         response = ai_client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=prompt_completo,
             config=config
         )

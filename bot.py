@@ -10,11 +10,8 @@ from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-# Configurazione token
 TELEGRAM_BOT_TOKEN = "8886071836:AAEaF6UX8MhYIaoVzBYnu-ununozQBNE-0E"
 CRYPTO_PAY_TOKEN = "632313:AAEKqdS9oAxDjFLiglSxMRrcYUiagu9rj2P"
-
-# La chiave viene letta in modo sicuro da Render senza metterla in chiaro nel codice
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 logging.basicConfig(level=logging.INFO)
@@ -100,7 +97,7 @@ async def process_check_payment(callback: types.CallbackQuery):
                 
     await callback.answer()
 
-# Gestione tramite Google Gemini API (Gratuita)
+# Gestione tramite Google Gemini API corretta (gemini-1.5-flash)
 @dp.message(F.text & ~F.text.startswith("/"))
 async def handle_any_text(message: types.Message):
     user_text = message.text.strip()
@@ -109,7 +106,8 @@ async def handle_any_text(message: types.Message):
         await message.answer("Errore: Chiave API di Gemini non configurata nelle variabili d'ambiente.")
         return
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # Usiamo gemini-1.5-flash che è il modello stabile e standard per le API gratuite
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     
     headers = {"Content-Type": "application/json"}
     payload = {
@@ -117,7 +115,7 @@ async def handle_any_text(message: types.Message):
             {
                 "parts": [
                     {
-                        "text": f"Sei un bot cinico, spietato, sarcastico e disprezzativo. L'utente ha scritto: '{user_text}'. Rispondi rigorosamente in massimo due frasi secche e taglienti, prendendo in giro il concetto espresso senza ripetere la sua frase paro paro."
+                        "text": f"Sei un bot cinico, spietato, sarcastico e disprezzativo. L'utente ha scritto: '{user_text}'. Rispondi rigorosamente in massimo due frasi secche e taglienti, prendendo in giro il concetto espresso senza ripetere la sua frase."
                     }
                 ]
             }
@@ -138,7 +136,6 @@ async def handle_any_text(message: types.Message):
         logging.error(f"Eccezione chiamata IA: {e}")
         await message.answer("Anche l'insulto intelligente oggi è in sciopero. Riprova più tardi.")
 
-# --- BLOCCO PER RENDER (Tiene aperta la porta HTTP) ---
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)

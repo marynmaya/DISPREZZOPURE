@@ -1,6 +1,3 @@
-Ecco la versione del codice pulita e senza la chiave scritta in chiaro, così GitHub non ti bloccherà più il caricamento:
-
-Python
 import logging
 import os
 import aiohttp

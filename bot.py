@@ -66,6 +66,25 @@ async def process_buy(callback: types.CallbackQuery):
     
     await callback.answer()
 
+# --- BLOCCO PER RENDER (Evita il Time Out senza installare nulla) ---
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import os
+
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+
+def run_server():
+    port = int(os.environ.get("PORT", 8000))
+    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
+    server.serve_forever()
+
 if __name__ == "__main__":
+    t = threading.Thread(target=run_server, daemon=True)
+    t.start()
+    
     import asyncio
     asyncio.run(dp.start_polling(bot))

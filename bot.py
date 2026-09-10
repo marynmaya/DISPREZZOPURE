@@ -91,11 +91,11 @@ async def process_check_payment(callback: types.CallbackQuery):
                         break
                 
                 if paid:
-                    ai_reply = "Hai pagato, ma la tua utilità resta comunque prossima allo zero."
+                    ai_reply = "Pagamento verificato, ma non è stato possibile generare l'insulto."
                     if ai_client:
                         try:
                             config_pagamento = genai_types.GenerateContentConfig(
-                                system_instruction="Sei un generatore di cinismo puro e imprevedibile. Non ripetere mai la stessa frase o lo stesso schema strutturale.",
+                                system_instruction="Sei un generatore di cinismo puro e imprevedibile. Non ripetere mai la stessa frase.",
                                 temperature=1.4,
                                 top_p=0.98,
                             )
@@ -127,7 +127,6 @@ async def handle_any_text(message: types.Message):
         await message.answer("Errore: Chiave API di Gemini non configurata.")
         return
 
-    # Usiamo una System Instruction rigida insieme a una temperatura molto alta (1.4)
     config = genai_types.GenerateContentConfig(
         system_instruction=(
             "Sei un'intelligenza artificiale cinica, caustica, spietata e profondamente sarcastica. "
@@ -157,10 +156,10 @@ async def handle_any_text(message: types.Message):
         if response and response.text:
             await message.answer(response.text.strip())
         else:
-            await message.answer("Silenzio cosmico. Anche il mio cinismo oggi è a corto di parole.")
+            await message.answer("Errore: L'IA non ha restituito alcun testo.")
     except Exception as e:
         logging.error(f"Eccezione chiamata Google GenAI: {e}")
-        await message.answer("Il cervello IA è temporaneamente in sciopero.")
+        await message.answer(f"Errore tecnico durante la chiamata IA: {e}")
 
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):

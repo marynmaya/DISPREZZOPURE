@@ -97,7 +97,7 @@ async def process_check_payment(callback: types.CallbackQuery):
                 
     await callback.answer()
 
-# Risposte dinamiche e combinabili basate sul testo dell'utente
+# Risposta strutturata esattamente in due frasi fisse ma legate al testo
 @dp.message(F.text & ~F.text.startswith("/"))
 async def handle_any_text(message: types.Message):
     import random
@@ -108,22 +108,21 @@ async def handle_any_text(message: types.Message):
     else:
         short_text = user_text
 
-    incipit = [
-        f"Ascoltarti dire '{short_text}'",
-        f"Leggere che '{short_text}'",
-        f"L'idea folle secondo cui '{short_text}'",
-        f"La tua profonda riflessione: '{short_text}'"
+    frase_uno = [
+        f"Mi dici che '{short_text}' come se a qualcuno potesse importare.",
+        f"Affermi che '{short_text}' ignorando totalmente quanto la tua opinione sia irrilevante.",
+        f"Vieni qui a scrivermi '{short_text}' pretendendo pure di essere preso sul serio.",
+        f"L'idea che tu pensi '{short_text}' spiega perfettamente il tuo stato mentale."
     ]
     
-    corpo = [
-        "mi fa rimpiangere il silenzio assoluto.",
-        "è la prova provata che il tempo è denaro, e tu stai sprecando entrambi.",
-        "ha lo stesso spessore intellettuale di un cartone della pizza unto.",
-        "rappresenta perfettamente il picco più basso della tua giornata.",
-        "farà sicuramente il giro del nulla cosmico per quanto è banale."
+    frase_due = [
+        "Elimina l'account e risparmiaci altra aria sprecata.",
+        "Torna a dormire, che forse è l'unica cosa che ti riesce decentemente.",
+        "La prossima volta evita di condividere il vuoto spinto che hai in testa.",
+        "Certe banalità farebbero spegnere il cervello pure a un bradipo."
     ]
 
-    risposta = f"{random.choice(incipit)} {random.choice(corpo)}"
+    risposta = f"{random.choice(frase_uno)} {random.choice(frase_due)}"
     await message.answer(risposta)
 
 # --- BLOCCO PER RENDER (Tiene aperta la porta HTTP) ---

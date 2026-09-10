@@ -97,32 +97,41 @@ async def process_check_payment(callback: types.CallbackQuery):
                 
     await callback.answer()
 
-# Risposta strutturata esattamente in due frasi fisse ma legate al testo
+# Generazione basata sull'indice univoco calcolato dal testo dell'utente
 @dp.message(F.text & ~F.text.startswith("/"))
 async def handle_any_text(message: types.Message):
-    import random
-    user_text = message.text
+    user_text = message.text.strip()
     
     if len(user_text) > 40:
         short_text = user_text[:37] + "..."
     else:
         short_text = user_text
 
+    # Usiamo la somma dei codici dei caratteri del testo per variare sempre la scelta
+    seed = sum(ord(c) for c in user_text)
+    
     frase_uno = [
-        f"Mi dici che '{short_text}' come se a qualcuno potesse importare.",
-        f"Affermi che '{short_text}' ignorando totalmente quanto la tua opinione sia irrilevante.",
-        f"Vieni qui a scrivermi '{short_text}' pretendendo pure di essere preso sul serio.",
-        f"L'idea che tu pensi '{short_text}' spiega perfettamente il tuo stato mentale."
+        f"Mi vieni a raccontare che '{short_text}' come se a qualcuno potesse importare qualcosa.",
+        f"Pretendi di venirmi a dire '{short_text}' ignorando totalmente quanto la tua opinione sia irrilevante.",
+        f"Te ne esci dicendo '{short_text}' e pretendi pure di non fare ridere i polli.",
+        f"L'idea fissa secondo cui '{short_text}' la dice lunga sul vuoto che hai dentro.",
+        f"Vieni qui a scrivermi '{short_text}' dimostrando una coerenza pari a zero.",
+        f"Sostenere che '{short_text}' è il modo migliore per certificare la tua totale assenza di idee."
     ]
     
     frase_due = [
         "Elimina l'account e risparmiaci altra aria sprecata.",
-        "Torna a dormire, che forse è l'unica cosa che ti riesce decentemente.",
-        "La prossima volta evita di condividere il vuoto spinto che hai in testa.",
-        "Certe banalità farebbero spegnere il cervello pure a un bradipo."
+        "Torna a dormire, che forse è l'unica cosa che ti riesce decentemente nella vita.",
+        "La prossima volta evita di condividere il vuoto spinto che ti abita in testa.",
+        "Certe banalità farebbero spegnere il cervello pure a un bradipo in coma.",
+        "Risparmiaci queste uscite da bar dello sport di periferia.",
+        "Il mondo girerebbe decisamente meglio se evitassi di digitare cose a caso."
     ]
 
-    risposta = f"{random.choice(frase_uno)} {random.choice(frase_due)}"
+    idx1 = seed % len(frase_uno)
+    idx2 = (seed // 3) % len(frase_due)
+
+    risposta = f"{frase_uno[idx1]} {frase_due[idx2]}"
     await message.answer(risposta)
 
 # --- BLOCCO PER RENDER (Tiene aperta la porta HTTP) ---

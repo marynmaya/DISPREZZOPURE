@@ -1,6 +1,5 @@
 import logging
 import os
-import random
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import asyncio
@@ -10,9 +9,13 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from google import genai
 
-TELEGRAM_BOT_TOKEN = "8886071836:AAEaF6UX8MhYIaoVzBYnu-ununozQBNE-0E"
+# Legge il token dalle variabili d'ambiente di Render
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("BOT_TOKEN")
 CRYPTO_PAY_TOKEN = "632313:AAEKqdS9oAxDjFLiglSxMRrcYUiagu9rj2P"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+if not TELEGRAM_BOT_TOKEN:
+    raise ValueError("ERRORE: Token di Telegram non trovato nelle variabili d'ambiente!")
 
 # Inizializzazione del client ufficiale Google GenAI
 if GEMINI_API_KEY:
@@ -92,9 +95,8 @@ async def process_check_payment(callback: types.CallbackQuery):
                     if ai_client:
                         try:
                             prompt_pagamento = "L'utente ha pagato regolarmente l'insulto. Dagli un insulto d'élite e spietato per celebrarlo in massimo due frasi."
-                            response = await asyncio.to_thread(
-                                ai_client.models.generate_content,
-                                model="gemini-1.5-flash",
+                            response = ai_client.models.generate_content(
+                                model="gemini-2.5-flash",
                                 contents=prompt_pagamento
                             )
                             if response and response.text:
@@ -110,7 +112,6 @@ async def process_check_payment(callback: types.CallbackQuery):
                 
     await callback.answer()
 
-# Gestione dinamica dei messaggi di testo tramite Google GenAI
 @dp.message(F.text & ~F.text.startswith("/"))
 async def handle_any_text(message: types.Message):
     user_text = message.text.strip()
@@ -127,9 +128,8 @@ async def handle_any_text(message: types.Message):
     )
 
     try:
-        response = await asyncio.to_thread(
-            ai_client.models.generate_content,
-            model="gemini-1.5-flash",
+        response = ai_client.models.generate_content(
+            model="gemini-2.5-flash",
             contents=prompt_completo
         )
         

@@ -1,13 +1,24 @@
+Ecco la versione del codice pulita e senza la chiave scritta in chiaro, così GitHub non ti bloccherà più il caricamento:
+
+Python
 import logging
+import os
+import aiohttp
+import random
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import asyncio
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-# Configurazione token e prezzi
+# Configurazione token
 TELEGRAM_BOT_TOKEN = "8886071836:AAEaF6UX8MhYIaoVzBYnu-ununozQBNE-0E"
 CRYPTO_PAY_TOKEN = "632313:AAEKqdS9oAxDjFLiglSxMRrcYUiagu9rj2P"
-PRICE_USDT_TON = 0.5  # Prezzo impostato a 0.5
+
+# La chiave viene letta in modo sicuro da Render senza metterla in chiaro nel codice
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -35,8 +46,6 @@ async def cmd_start(message: types.Message):
 
 @dp.callback_query(F.data == "buy_insult")
 async def process_buy(callback: types.CallbackQuery):
-    import aiohttp
-    
     url = "https://pay.crypt.bot/api/createInvoice"
     headers = {"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN}
     payload = {
@@ -68,9 +77,6 @@ async def process_buy(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "check_payment")
 async def process_check_payment(callback: types.CallbackQuery):
-    import aiohttp
-    import random
-    
     url = "https://pay.crypt.bot/api/getInvoices"
     headers = {"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN}
     
@@ -97,48 +103,45 @@ async def process_check_payment(callback: types.CallbackQuery):
                 
     await callback.answer()
 
-# Generazione basata sull'indice univoco calcolato dal testo dell'utente
+# Gestione tramite Google Gemini API (Gratuita)
 @dp.message(F.text & ~F.text.startswith("/"))
 async def handle_any_text(message: types.Message):
     user_text = message.text.strip()
     
-    if len(user_text) > 40:
-        short_text = user_text[:37] + "..."
-    else:
-        short_text = user_text
+    if not GEMINI_API_KEY:
+        await message.answer("Errore: Chiave API di Gemini non configurata nelle variabili d'ambiente.")
+        return
 
-    # Usiamo la somma dei codici dei caratteri del testo per variare sempre la scelta
-    seed = sum(ord(c) for c in user_text)
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
     
-    frase_uno = [
-        f"Mi vieni a raccontare che '{short_text}' come se a qualcuno potesse importare qualcosa.",
-        f"Pretendi di venirmi a dire '{short_text}' ignorando totalmente quanto la tua opinione sia irrilevante.",
-        f"Te ne esci dicendo '{short_text}' e pretendi pure di non fare ridere i polli.",
-        f"L'idea fissa secondo cui '{short_text}' la dice lunga sul vuoto che hai dentro.",
-        f"Vieni qui a scrivermi '{short_text}' dimostrando una coerenza pari a zero.",
-        f"Sostenere che '{short_text}' è il modo migliore per certificare la tua totale assenza di idee."
-    ]
-    
-    frase_due = [
-        "Elimina l'account e risparmiaci altra aria sprecata.",
-        "Torna a dormire, che forse è l'unica cosa che ti riesce decentemente nella vita.",
-        "La prossima volta evita di condividere il vuoto spinto che ti abita in testa.",
-        "Certe banalità farebbero spegnere il cervello pure a un bradipo in coma.",
-        "Risparmiaci queste uscite da bar dello sport di periferia.",
-        "Il mondo girerebbe decisamente meglio se evitassi di digitare cose a caso."
-    ]
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": f"Sei un bot cinico, spietato, sarcastico e disprezzativo. L'utente ha scritto: '{user_text}'. Rispondi rigorosamente in massimo due frasi secche e taglienti, prendendo in giro il concetto espresso senza ripetere la sua frase paro paro."
+                    }
+                ]
+            }
+        ]
+    }
 
-    idx1 = seed % len(frase_uno)
-    idx2 = (seed // 3) % len(frase_due)
-
-    risposta = f"{frase_uno[idx1]} {frase_due[idx2]}"
-    await message.answer(risposta)
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=headers) as resp:
+                data = await resp.json()
+                if resp.status == 200 and "candidates" in data:
+                    ai_reply = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    await message.answer(ai_reply)
+                else:
+                    logging.error(f"Errore API Gemini: {data}")
+                    await message.answer("Il mio cervello cinico ha avuto un sussulto. Riprova tra poco.")
+    except Exception as e:
+        logging.error(f"Eccezione chiamata IA: {e}")
+        await message.answer("Anche l'insulto intelligente oggi è in sciopero. Riprova più tardi.")
 
 # --- BLOCCO PER RENDER (Tiene aperta la porta HTTP) ---
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import os
-
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -154,5 +157,4 @@ if __name__ == "__main__":
     t = threading.Thread(target=run_server, daemon=True)
     t.start()
     
-    import asyncio
     asyncio.run(dp.start_polling(bot))

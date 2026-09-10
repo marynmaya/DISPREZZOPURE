@@ -3,6 +3,7 @@ import os
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import asyncio
+import random
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -94,10 +95,11 @@ async def process_check_payment(callback: types.CallbackQuery):
                     if ai_client:
                         try:
                             config_pagamento = genai_types.GenerateContentConfig(
-                                temperature=1.2,
+                                temperature=1.3,
                                 top_p=0.95,
                             )
-                            prompt_pagamento = "L'utente ha pagato l'insulto. Inventa un tributo di disprezzo d'élite totalmente inedito e spietato per celebrarlo."
+                            rnd_pay = f" [ID-PAY-{random.randint(10000, 99999)}]"
+                            prompt_pagamento = f"L'utente ha pagato l'insulto.{rnd_pay} Inventa un tributo di disprezzo d'élite totalmente inedito e spietato per celebrarlo."
                             response = ai_client.models.generate_content(
                                 model="gemini-2.5-flash",
                                 contents=prompt_pagamento,
@@ -124,18 +126,18 @@ async def handle_any_text(message: types.Message):
         await message.answer("Errore: Chiave API di Gemini non configurata.")
         return
 
-    # Configurazione della temperatura alta per massima imprevedibilità e varietà
     config = genai_types.GenerateContentConfig(
-        temperature=1.2,
+        temperature=1.3,
         top_p=0.95,
     )
 
+    random_seed_text = f" [ID-RND-{random.randint(10000, 99999)}]"
+
     prompt_completo = (
-        f"Sei un bot estremamente cinico, sarcastico e spietato. "
-        f"L'utente ti ha scritto questo: '{user_text}'. "
-        f"Inventa una risposta caustica, tagliente e del tutto originale che prenda in giro "
-        f"quello che ha detto, variando liberamente la struttura e la lunghezza a ogni messaggio. "
-        f"Evita assolutamente frasi ripetitive."
+        f"Sei un bot cinico, caustico e spietato. "
+        f"L'utente ha scritto: '{user_text}'.{random_seed_text} "
+        f"Crea un insulto tagliente, originale e del tutto inedito, evitando qualsiasi schema ripetitivo "
+        f"e variando totalmente le parole rispetto a quanto potresti aver detto prima."
     )
 
     try:

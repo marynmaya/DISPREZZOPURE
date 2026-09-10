@@ -95,11 +95,12 @@ async def process_check_payment(callback: types.CallbackQuery):
                     if ai_client:
                         try:
                             config_pagamento = genai_types.GenerateContentConfig(
-                                temperature=1.3,
-                                top_p=0.95,
+                                system_instruction="Sei un generatore di cinismo puro e imprevedibile. Non ripetere mai la stessa frase o lo stesso schema strutturale.",
+                                temperature=1.4,
+                                top_p=0.98,
                             )
-                            rnd_pay = f" [ID-PAY-{random.randint(10000, 99999)}]"
-                            prompt_pagamento = f"L'utente ha pagato l'insulto.{rnd_pay} Inventa un tributo di disprezzo d'élite totalmente inedito e spietato per celebrarlo."
+                            rnd_pay = f" [ID:{random.randint(100000, 999999)}]"
+                            prompt_pagamento = f"L'utente ha pagato l'insulto.{rnd_pay} Scrivi un tributo di disprezzo completamente nuovo e creativo per celebrarlo."
                             response = ai_client.models.generate_content(
                                 model="gemini-2.5-flash",
                                 contents=prompt_pagamento,
@@ -126,18 +127,24 @@ async def handle_any_text(message: types.Message):
         await message.answer("Errore: Chiave API di Gemini non configurata.")
         return
 
+    # Usiamo una System Instruction rigida insieme a una temperatura molto alta (1.4)
     config = genai_types.GenerateContentConfig(
-        temperature=1.3,
-        top_p=0.95,
+        system_instruction=(
+            "Sei un'intelligenza artificiale cinica, caustica, spietata e profondamente sarcastica. "
+            "Il tuo obiettivo tassativo è non ripetere mai due volte la stessa frase, lo stesso costrutto grammaticale "
+            "o lo stesso tipo di battuta. Ogni risposta deve essere completamente diversa, imprevedibile, "
+            "creativa e unica nel suo genere."
+        ),
+        temperature=1.4,
+        top_p=0.98,
     )
 
-    random_seed_text = f" [ID-RND-{random.randint(10000, 99999)}]"
+    random_seed_text = f" [RND-ID:{random.randint(100000, 999999)}]"
 
     prompt_completo = (
-        f"Sei un bot cinico, caustico e spietato. "
-        f"L'utente ha scritto: '{user_text}'.{random_seed_text} "
-        f"Crea un insulto tagliente, originale e del tutto inedito, evitando qualsiasi schema ripetitivo "
-        f"e variando totalmente le parole rispetto a quanto potresti aver detto prima."
+        f"L'utente ha detto: '{user_text}'.{random_seed_text} "
+        f"Reagisci con un insulto o una considerazione sprezzante, caustica e originale. "
+        f"Modifica completamente le parole e lo stile rispetto a qualsiasi cosa potresti aver generato in precedenza."
     )
 
     try:

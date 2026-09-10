@@ -97,6 +97,22 @@ async def process_check_payment(callback: types.CallbackQuery):
                 
     await callback.answer()
 
+# Risposta cinica basata sul testo scritto dall'utente
+@dp.message(F.text & ~F.text.startswith("/"))
+async def handle_any_text(message: types.Message):
+    import random
+    user_text = message.text
+    
+    templates = [
+        f"Hai scritto '{user_text}'? Che perla di inestimabile banalità.",
+        f"Analizzando la tua affermazione '{user_text}', posso confermare che il vuoto cosmico ha molta più sostanza di te.",
+        f"Ti meriti un premio Nobel per aver digitato '{user_text}', categoria 'massima inutilità'.",
+        f"La profondità intellettuale di ciò che hai detto ('{user_text}') è pari a una pozzanghera d'agosto.",
+        f"Interessante che tu pensi '{user_text}'. Peccato che l'unico a stupirsi della tua mediocrità sia tu stesso."
+    ]
+    
+    await message.answer(random.choice(templates))
+
 # --- BLOCCO PER RENDER (Tiene aperta la porta HTTP) ---
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler

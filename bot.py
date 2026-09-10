@@ -8,8 +8,8 @@ from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from google import genai
+from google.genai import types as genai_types
 
-# Legge il token dalle variabili d'ambiente di Render
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("BOT_TOKEN")
 CRYPTO_PAY_TOKEN = "632313:AAEKqdS9oAxDjFLiglSxMRrcYUiagu9rj2P"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -17,7 +17,6 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if not TELEGRAM_BOT_TOKEN:
     raise ValueError("ERRORE: Token di Telegram non trovato nelle variabili d'ambiente!")
 
-# Inizializzazione del client ufficiale Google GenAI
 if GEMINI_API_KEY:
     ai_client = genai.Client(api_key=GEMINI_API_KEY)
 else:
@@ -94,10 +93,15 @@ async def process_check_payment(callback: types.CallbackQuery):
                     ai_reply = "Hai pagato, ma la tua utilità resta comunque prossima allo zero."
                     if ai_client:
                         try:
-                            prompt_pagamento = "L'utente ha pagato regolarmente l'insulto. Dagli un insulto d'élite e spietato per celebrarlo."
+                            config_pagamento = genai_types.GenerateContentConfig(
+                                temperature=1.2,
+                                top_p=0.95,
+                            )
+                            prompt_pagamento = "L'utente ha pagato l'insulto. Inventa un tributo di disprezzo d'élite totalmente inedito e spietato per celebrarlo."
                             response = ai_client.models.generate_content(
                                 model="gemini-2.5-flash",
-                                contents=prompt_pagamento
+                                contents=prompt_pagamento,
+                                config=config_pagamento
                             )
                             if response and response.text:
                                 ai_reply = response.text.strip()
@@ -106,7 +110,7 @@ async def process_check_payment(callback: types.CallbackQuery):
                     
                     await callback.message.answer(f"Pagamento verificato! Ecco il tuo insulto:\n\n_{ai_reply}_", parse_mode="Markdown")
                 else:
-                    await callback.message.answer("Risultato: pagamento non ancora completato o non trovato. Completa il pagamento tramite il link sopra e riprova.")
+                    await callback.message.answer("Risultato: pagamento non ancora completato o non trovato.")
             else:
                 await callback.message.answer("Errore nella verifica del pagamento. Riprova più tardi.")
                 
@@ -117,30 +121,37 @@ async def handle_any_text(message: types.Message):
     user_text = message.text.strip()
     
     if not ai_client:
-        await message.answer("Errore: Chiave API di Gemini non configurata nelle variabili d'ambiente.")
+        await message.answer("Errore: Chiave API di Gemini non configurata.")
         return
 
+    # Configurazione della temperatura alta per massima imprevedibilità e varietà
+    config = genai_types.GenerateContentConfig(
+        temperature=1.2,
+        top_p=0.95,
+    )
+
     prompt_completo = (
-        f"Sei un bot cinico, spietato, sarcastico e disprezzativo. "
-        f"L'utente ha scritto: '{user_text}'. "
-        f"Rispondi in modo tagliente e sprezzante, variando la lunghezza liberamente "
-        f"tra una e tre frasi a seconda di quanto l'affermazione dell'utente meriti disprezzo, "
-        f"senza ripetere la sua frase paro paro."
+        f"Sei un bot estremamente cinico, sarcastico e spietato. "
+        f"L'utente ti ha scritto questo: '{user_text}'. "
+        f"Inventa una risposta caustica, tagliente e del tutto originale che prenda in giro "
+        f"quello che ha detto, variando liberamente la struttura e la lunghezza a ogni messaggio. "
+        f"Evita assolutamente frasi ripetitive."
     )
 
     try:
         response = ai_client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=prompt_completo
+            contents=prompt_completo,
+            config=config
         )
         
         if response and response.text:
             await message.answer(response.text.strip())
         else:
-            await message.answer("Il mio cervello cinico ha avuto un vuoto cosmico. Riprova tra poco.")
+            await message.answer("Silenzio cosmico. Anche il mio cinismo oggi è a corto di parole.")
     except Exception as e:
         logging.error(f"Eccezione chiamata Google GenAI: {e}")
-        await message.answer("Anche l'insulto intelligente oggi è in sciopero. Riprova più tardi.")
+        await message.answer("Il cervello IA è temporaneamente in sciopero.")
 
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):

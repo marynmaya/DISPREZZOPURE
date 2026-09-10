@@ -94,7 +94,7 @@ async def process_check_payment(callback: types.CallbackQuery):
                     ai_reply = "Hai pagato, ma la tua utilità resta comunque prossima allo zero."
                     if ai_client:
                         try:
-                            prompt_pagamento = "L'utente ha pagato regolarmente l'insulto. Dagli un insulto d'élite e spietato per celebrarlo in massimo due frasi."
+                            prompt_pagamento = "L'utente ha pagato regolarmente l'insulto. Dagli un insulto d'élite e spietato per celebrarlo."
                             response = ai_client.models.generate_content(
                                 model="gemini-2.5-flash",
                                 contents=prompt_pagamento
@@ -123,8 +123,9 @@ async def handle_any_text(message: types.Message):
     prompt_completo = (
         f"Sei un bot cinico, spietato, sarcastico e disprezzativo. "
         f"L'utente ha scritto: '{user_text}'. "
-        f"Rispondi rigorosamente in massimo due frasi secche e taglienti, prendendo in giro "
-        f"il concetto espresso senza ripetere la sua frase paro paro."
+        f"Rispondi in modo tagliente e sprezzante, variando la lunghezza liberamente "
+        f"tra una e tre frasi a seconda di quanto l'affermazione dell'utente meriti disprezzo, "
+        f"senza ripetere la sua frase paro paro."
     )
 
     try:

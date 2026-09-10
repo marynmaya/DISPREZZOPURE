@@ -1,6 +1,5 @@
 import logging
 import os
-import aiohttp
 import random
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -9,22 +8,26 @@ from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+import google.generativeai as genai
 
 TELEGRAM_BOT_TOKEN = "8886071836:AAEaF6UX8MhYIaoVzBYnu-ununozQBNE-0E"
 CRYPTO_PAY_TOKEN = "632313:AAEKqdS9oAxDjFLiglSxMRrcYUiagu9rj2P"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
+# Configurazione di Google GenAI
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    # Usiamo il modello flash standard
+    generation_model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction="Sei un bot cinico, spietato, sarcastico e disprezzativo. L'utente ti scriverà qualcosa. Tu devi rispondere rigorosamente in massimo due frasi secche e taglienti, prendendo in giro quello che ha detto senza ripeterlo paro paro, demolendo le sue convinzioni."
+    )
+else:
+    generation_model = None
+
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
-
-INSULTI = [
-    "Hai la stessa utilità di un posacenere su una moto da cross.",
-    "Se la mediocrità avesse una capitale, tu saresti il sindaco onorario.",
-    "Il tuo cervello viaggia così in ritardo che quando arrivano le idee sono già scadute.",
-    "Sei la prova vivente che l'evoluzione a volte si prende una pausa sabbatica.",
-    "Hai il QI di un ferro da stiro, ma con molta meno personalità."
-]
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
@@ -40,6 +43,7 @@ async def cmd_start(message: types.Message):
 
 @dp.callback_query(F.data == "buy_insult")
 async def process_buy(callback: types.CallbackQuery):
+    import aiohttp
     url = "https://pay.crypt.bot/api/createInvoice"
     headers = {"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN}
     payload = {
@@ -71,6 +75,7 @@ async def process_buy(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "check_payment")
 async def process_check_payment(callback: types.CallbackQuery):
+    import aiohttp
     url = "https://pay.crypt.bot/api/getInvoices"
     headers = {"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN}
     
@@ -88,8 +93,17 @@ async def process_check_payment(callback: types.CallbackQuery):
                         break
                 
                 if paid:
-                    insulto_scelto = random.choice(INSULTI)
-                    await callback.message.answer(f"Pagamento verificato! Ecco il tuo insulto:\n\n_{insulto_scelto}_", parse_mode="Markdown")
+                    # Se ha pagato, usiamo direttamente l'IA anche qui per un insulto epico personalizzato
+                    if generation_model:
+                        try:
+                            response = generation_model.generate_content("L'utente ha pagato regolarmente, dagli un insulto d'élite per celebrarlo.")
+                            ai_reply = response.text.strip()
+                        except Exception:
+                            ai_reply = "Hai pagato, ma il tuo valore resta comunque prossimo allo zero."
+                    else:
+                        ai_reply = "Pagamento verificato, ma il cervello elettronico è disattivato."
+                    
+                    await callback.message.answer(f"Pagamento verificato! Ecco il tuo insulto:\n\n_{ai_reply}_", parse_mode="Markdown")
                 else:
                     await callback.message.answer("Risultato: pagamento non ancora completato o non trovato. Completa il pagamento tramite il link sopra e riprova.")
             else:
@@ -97,43 +111,24 @@ async def process_check_payment(callback: types.CallbackQuery):
                 
     await callback.answer()
 
-# Gestione tramite Google Gemini API corretta (gemini-1.5-flash)
+# Gestione tramite SDK ufficiale Google Gemini
 @dp.message(F.text & ~F.text.startswith("/"))
 async def handle_any_text(message: types.Message):
     user_text = message.text.strip()
     
-    if not GEMINI_API_KEY:
+    if not generation_model:
         await message.answer("Errore: Chiave API di Gemini non configurata nelle variabili d'ambiente.")
         return
 
-    # Usiamo gemini-1.5-flash che è il modello stabile e standard per le API gratuite
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-    
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {
-                        "text": f"Sei un bot cinico, spietato, sarcastico e disprezzativo. L'utente ha scritto: '{user_text}'. Rispondi rigorosamente in massimo due frasi secche e taglienti, prendendo in giro il concetto espresso senza ripetere la sua frase."
-                    }
-                ]
-            }
-        ]
-    }
-
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, headers=headers) as resp:
-                data = await resp.json()
-                if resp.status == 200 and "candidates" in data:
-                    ai_reply = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                    await message.answer(ai_reply)
-                else:
-                    logging.error(f"Errore API Gemini: {data}")
-                    await message.answer("Il mio cervello cinico ha avuto un sussulto. Riprova tra poco.")
+        # Eseguiamo la generazione in modo asincrono per non bloccare il bot Telegram
+        response = await asyncio.to_thread(generation_model.generate_content, user_text)
+        if response and response.text:
+            await message.answer(response.text.strip())
+        else:
+            await message.answer("Il mio cervello cinico ha avuto un sussulto vuoto. Riprova tra poco.")
     except Exception as e:
-        logging.error(f"Eccezione chiamata IA: {e}")
+        logging.error(f"Eccezione chiamata IA ufficiale: {e}")
         await message.answer("Anche l'insulto intelligente oggi è in sciopero. Riprova più tardi.")
 
 class SimpleHandler(BaseHTTPRequestHandler):
